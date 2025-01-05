@@ -47,6 +47,7 @@ impl SnapshotBaseFolder {
         create_dir(&folder)
             .map_err(|e| format!("Failed to create snapshot folder: {}", e))?;
 
+        log::info!("Snapshot folder '{}' created", folder.display());
         Ok(folder)
     }
 }

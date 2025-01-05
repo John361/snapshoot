@@ -1,4 +1,4 @@
-use lib::business::{Initializer, SnapshotBaseFolder};
+use lib::business::{Initializer, SnapshotBaseFolder, SnapshotProcess};
 use lib::cli::Cli;
 use lib::LOG_FILE;
 
@@ -18,10 +18,15 @@ fn main() {
                 .unwrap_or_else(|e| panic!("Error during initialization: {0}", e));
 
             let snapshot_base_folder = SnapshotBaseFolder::default();
-            let _yesterday = snapshot_base_folder.get_yesterday(destination)
+            let yesterday = snapshot_base_folder.get_yesterday(destination)
                 .unwrap_or_else(|e| panic!("Cannot get yesterday snapshot folder even if does not exist: {0}", e));
-            let _today = snapshot_base_folder.create_today(destination)
+            let today = snapshot_base_folder.create_today(destination)
                 .unwrap_or_else(|e| panic!("Cannot create snapshot folder: {0}", e));
+            let today = std::path::Path::new(&today);
+
+            let snapshot_process = SnapshotProcess::default();
+            snapshot_process.run(source, yesterday, today)
+                .unwrap_or_else(|e| panic!("Cannot process to snapshot: {0}", e));
         }
     }
 }
