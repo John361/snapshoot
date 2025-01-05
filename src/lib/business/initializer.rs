@@ -32,6 +32,13 @@ impl Initializer {
         }
 
         if !snapshoot_file_path.exists() {
+            if !read_dir(destination)
+                .map_err(|e| e.to_string())?
+                .next()
+                .is_none() {
+                return Err("Destination folder must be empty".to_string());
+            }
+
             Self::create_snapshoot(&snapshoot_file_path)?;
             log::info!("Snapshoot successfully initialized");
         } else {
