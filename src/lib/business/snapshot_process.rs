@@ -17,8 +17,6 @@ impl SnapshotProcess {
     }
 
     async fn run_fresh(&self, source: &Path, today: &Path) -> Result<(), String> {
-        log::info!("Running fresh snapshot");
-
         let mut entries = fs::read_dir(source)
             .await
             .map_err(|e| format!("Failed to read source directory: {}", e))?;
@@ -32,6 +30,13 @@ impl SnapshotProcess {
             let destination = today.join(entry.file_name());
 
             if path.is_dir() {
+                let folder_name = path.file_name()
+                    .ok_or_else(|| format!("Failed to get folder name from path: {:?}", path))?;
+                let folder = today.join(folder_name);
+
+                std::fs::create_dir(&folder)
+                    .map_err(|e| format!("Failed to create folder: {}", e))?;
+
                 self.run_fresh_recursively(&path, &destination).await?;
             } else {
                 fs::copy(&path, &destination)
@@ -48,7 +53,6 @@ impl SnapshotProcess {
     }
 
     async fn run_on_existing(&self, _source: &Path, _yesterday: &Path, _today: &Path) -> Result<(), String> {
-        log::info!("Running with existing snapshot");
         Ok(())
     }
 }

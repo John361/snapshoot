@@ -26,9 +26,11 @@ async fn main() {
             let today = std::path::Path::new(&today);
 
             let snapshot_process = SnapshotProcess::default();
+            log::info!("Starting snapshot");
             snapshot_process.run(source, yesterday, today)
                 .await
                 .unwrap_or_else(|e| panic!("Cannot process to snapshot: {0}", e));
+            log::info!("Snapshot finished");
         }
     }
 }
