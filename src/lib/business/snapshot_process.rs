@@ -29,15 +29,23 @@ impl SnapshotProcess {
             let path = entry.path();
             let destination = today.join(entry.file_name());
 
-            if path.is_dir() {
-                let folder_name = path.file_name()
-                    .ok_or_else(|| format!("Failed to get folder name from path: {:?}", path))?;
-                let folder = today.join(folder_name);
+            let path_file_name = path.file_name()
+                .ok_or_else(|| format!("Failed to get folder name from path: {:?}", path))?;
+            let path_file = today.join(path_file_name);
 
-                std::fs::create_dir(&folder)
+            if path.is_dir() {
+                std::fs::create_dir(&path_file)
                     .map_err(|e| format!("Failed to create folder: {}", e))?;
 
                 self.run_fresh_recursively(&path, &destination).await?;
+            } else if path.is_symlink() {
+                let link = fs::read_link(path)
+                    .await
+                    .map_err(|e| format!("Failed to read symlink target: {}", e))?;
+
+                fs::symlink(&link, path_file)
+                    .await
+                    .map_err(|e| format!("Failed to create symlink in destination: {}", e))?;
             } else {
                 fs::copy(&path, &destination)
                     .await
