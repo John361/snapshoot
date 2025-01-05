@@ -3,12 +3,20 @@ use std::fs::{read_dir, set_permissions, OpenOptions, Permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
-static EXTENSION: &str = "snapshoot";
+pub struct Initializer {
+    file_extension: String,
+}
 
-pub struct Initializer;
+impl Default for Initializer {
+    fn default() -> Self {
+        Self {
+            file_extension: "snapshoot".to_string(),
+        }
+    }
+}
 
 impl Initializer {
-    pub fn run(source: &Path, destination: &Path) -> Result<(), String> {
+    pub fn run(&self, source: &Path, destination: &Path) -> Result<(), String> {
         if !source.is_absolute() || !destination.is_absolute() {
             return Err("Source and destination folder must be an absolute path".to_string());
         }
@@ -24,10 +32,10 @@ impl Initializer {
         let snapshoot_file = source
             .file_name().unwrap()
             .to_str().unwrap();
-        let snapshoot_file = format!(".{0}.{1}", snapshoot_file, EXTENSION);
+        let snapshoot_file = format!(".{0}.{1}", snapshoot_file, &self.file_extension);
         let snapshoot_file_path = destination.join(&snapshoot_file);
 
-        if Self::another_initialization(destination, &snapshoot_file)? {
+        if self.another_initialization(destination, &snapshoot_file)? {
             return Err("Destination folder already initialized for another folder".to_string());
         }
 
@@ -39,7 +47,7 @@ impl Initializer {
                 return Err("Destination folder must be empty".to_string());
             }
 
-            Self::create_snapshoot(&snapshoot_file_path)?;
+            self.create_snapshoot(&snapshoot_file_path)?;
             log::info!("Snapshoot successfully initialized");
         } else {
             log::info!("Snapshoot already initialized")
@@ -48,7 +56,7 @@ impl Initializer {
         Ok(())
     }
 
-    fn create_snapshoot(path: &Path) -> Result<(), String> {
+    fn create_snapshoot(&self, path: &Path) -> Result<(), String> {
         OpenOptions::new()
             .create_new(true)
             .write(true)
@@ -61,7 +69,7 @@ impl Initializer {
         Ok(())
     }
 
-    fn another_initialization(path: &Path, current_snapshoot_file: &str) -> Result<bool, String> {
+    fn another_initialization(&self, path: &Path, current_snapshoot_file: &str) -> Result<bool, String> {
         let folder = read_dir(path)
             .map_err(|e| e.to_string())?;
 
@@ -70,7 +78,7 @@ impl Initializer {
                 .map_err(|e| e.to_string())?;
             let path = entry.path();
 
-            if path.is_file() && path.extension() == Some(OsStr::new(EXTENSION)) {
+            if path.is_file() && path.extension() == Some(OsStr::new(&self.file_extension)) {
                 let filename = path
                     .file_name().unwrap()
                     .to_str().unwrap();

@@ -13,7 +13,8 @@ fn main() {
             let source = std::path::Path::new(&args.source);
             let destination = std::path::Path::new(&args.destination);
 
-            Initializer::run(source, destination)
+            let initializer = Initializer::default();
+            initializer.run(source, destination)
                 .unwrap_or_else(|e| panic!("Error during initialization: {0}", e));
 
             println!("{:#?}", args);
