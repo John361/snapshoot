@@ -1,3 +1,4 @@
+pub mod business;
 pub mod cli;
 
 pub static APP_NAME: &str = env!("CARGO_PKG_NAME");
