@@ -2,7 +2,8 @@ use lib::business::{Initializer, SnapshotBaseFolder, SnapshotProcess};
 use lib::cli::Cli;
 use lib::LOG_FILE;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     log4rs::init_file(LOG_FILE, Default::default())
         .unwrap_or_else(|_| panic!("Cannot init log4rs"));
 
@@ -26,6 +27,7 @@ fn main() {
 
             let snapshot_process = SnapshotProcess::default();
             snapshot_process.run(source, yesterday, today)
+                .await
                 .unwrap_or_else(|e| panic!("Cannot process to snapshot: {0}", e));
         }
     }
