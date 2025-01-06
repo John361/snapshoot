@@ -32,6 +32,7 @@ impl SnapshotProcess {
 
             let path = entry.path();
             let destination = today.join(entry.file_name());
+            log::info!("Processing {:?}", path);
 
             let path_file_name = path.file_name()
                 .ok_or_else(|| format!("Failed to get folder name from path: {:?}", path))?;
@@ -72,9 +73,16 @@ impl SnapshotProcess {
 
             let path = entry.path();
             let yesterday_destination = yesterday.join(entry.file_name());
+            let today_destination = today.join(entry.file_name());
+            log::info!("Processing {:?}", path);
 
             if yesterday_destination.exists() {
-                if path.is_file() {
+                if path.is_dir() {
+                    std::fs::create_dir(&today_destination)
+                        .map_err(|e| format!("Failed to create folder: {0}", e))?;
+
+                    Box::pin(self.run_on_existing(&path, &yesterday_destination, &today_destination)).await?;
+                } else if path.is_file() {
                     let path_file_name = path.file_name()
                         .ok_or_else(|| format!("Failed to get folder name from path: {:?}", path))?;
                     let today_path_file = today.join(path_file_name);
@@ -84,10 +92,29 @@ impl SnapshotProcess {
                             .await
                             .map_err(|e| format!("Failed to create symlink in destination: {0}", e))?;
                     } else {
-                        // Box::pin(self.run_fresh(&path, today)).await?;
+                        fs::copy(&path, &today_destination)
+                            .await
+                            .map_err(|e| e.to_string())?;
                     }
+                }
+            } else {
+                if path.is_dir() {
+                    std::fs::create_dir(&today_destination)
+                        .map_err(|e| format!("Failed to create folder: {0}", e))?;
+
+                    Box::pin(self.run_fresh(&path, &today_destination)).await?;
+                } else if path.is_symlink() {
+                    let link = fs::read_link(path)
+                        .await
+                        .map_err(|e| format!("Failed to read symlink target: {0}", e))?;
+
+                    fs::symlink(&link, today_destination)
+                        .await
+                        .map_err(|e| format!("Failed to create symlink in destination: {0}", e))?;
                 } else {
-                    // Box::pin(self.run_fresh(&path, today)).await?;
+                    fs::copy(&path, &today_destination)
+                        .await
+                        .map_err(|e| e.to_string())?;
                 }
             }
         }
