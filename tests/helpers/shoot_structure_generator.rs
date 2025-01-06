@@ -61,7 +61,10 @@ impl ShootStructureGenerator {
                 let file_path = base_path.join(format!("file_{}", rng.gen::<u32>()));
 
                 if rng.gen_bool(0.2) {
-                    let target_file = self.find_random_file(base_path).await.unwrap_or(file_path.clone());
+                    let target_file = self
+                        .find_random_file(base_path)
+                        .await
+                        .unwrap_or(file_path.clone());
                     fs::symlink(&target_file, &file_path).await.unwrap();
                 } else {
                     let file_size = rng.gen_range(1 * 1024 * 1024..10 * 1024 * 1024); // 1 MB à 10 MB

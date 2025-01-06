@@ -29,9 +29,7 @@ impl Initializer {
             return Err("Source and destination folder must be a directory".to_string());
         }
 
-        let snapshoot_file = source
-            .file_name().unwrap()
-            .to_str().unwrap();
+        let snapshoot_file = source.file_name().unwrap().to_str().unwrap();
         let snapshoot_file = format!(".{0}.{1}", snapshoot_file, &self.file_extension);
         let snapshoot_file_path = destination.join(&snapshoot_file);
 
@@ -43,7 +41,8 @@ impl Initializer {
             if !read_dir(destination)
                 .map_err(|e| e.to_string())?
                 .next()
-                .is_none() {
+                .is_none()
+            {
                 return Err("Destination folder must be empty".to_string());
             }
 
@@ -63,25 +62,24 @@ impl Initializer {
             .open(path)
             .map_err(|e| e.to_string())?;
 
-        set_permissions(path, Permissions::from_mode(0o400))
-            .map_err(|e| e.to_string())?;
+        set_permissions(path, Permissions::from_mode(0o400)).map_err(|e| e.to_string())?;
 
         Ok(())
     }
 
-    fn another_initialization(&self, path: &Path, current_snapshoot_file: &str) -> Result<bool, String> {
-        let folder = read_dir(path)
-            .map_err(|e| e.to_string())?;
+    fn another_initialization(
+        &self,
+        path: &Path,
+        current_snapshoot_file: &str,
+    ) -> Result<bool, String> {
+        let folder = read_dir(path).map_err(|e| e.to_string())?;
 
         for entry in folder {
-            let entry = entry
-                .map_err(|e| e.to_string())?;
+            let entry = entry.map_err(|e| e.to_string())?;
             let path = entry.path();
 
             if path.is_file() && path.extension() == Some(OsStr::new(&self.file_extension)) {
-                let filename = path
-                    .file_name().unwrap()
-                    .to_str().unwrap();
+                let filename = path.file_name().unwrap().to_str().unwrap();
 
                 if filename != current_snapshoot_file {
                     return Ok(true);

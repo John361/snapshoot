@@ -32,20 +32,17 @@ impl SnapshotBaseFolder {
         let folder = base_path.join(yesterday);
 
         if folder.exists() {
-           Ok(Some(folder))
+            Ok(Some(folder))
         } else {
             Ok(None)
         }
     }
 
     fn create_dir(&self, path: &Path) -> Result<PathBuf, String> {
-        let today = Local::now()
-            .format(&self.date_format)
-            .to_string();
+        let today = Local::now().format(&self.date_format).to_string();
 
         let folder = path.join(today);
-        create_dir(&folder)
-            .map_err(|e| format!("Failed to create snapshot folder: {}", e))?;
+        create_dir(&folder).map_err(|e| format!("Failed to create snapshot folder: {}", e))?;
 
         log::info!("Snapshot folder '{}' created", folder.display());
         Ok(folder)

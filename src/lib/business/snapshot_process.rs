@@ -10,7 +10,12 @@ use tokio::task::JoinSet;
 pub struct SnapshotProcess;
 
 impl SnapshotProcess {
-    pub async fn run(&self, source: &Path, yesterday: Option<PathBuf>, today: &Path) -> Result<(), String> {
+    pub async fn run(
+        &self,
+        source: &Path,
+        yesterday: Option<PathBuf>,
+        today: &Path,
+    ) -> Result<(), String> {
         if yesterday.is_none() {
             self.run_fresh(source, today).await
         } else {
@@ -25,16 +30,13 @@ impl SnapshotProcess {
             .await
             .map_err(|e| format!("Failed to read source directory: {0}", e))?;
 
-        while let Some(entry) = entries
-            .next_entry()
-            .await
-            .map_err(|e| e.to_string())? {
-
+        while let Some(entry) = entries.next_entry().await.map_err(|e| e.to_string())? {
             let path = entry.path();
             let destination = today.join(entry.file_name());
             log::info!("Processing {:?}", path);
 
-            let path_file_name = path.file_name()
+            let path_file_name = path
+                .file_name()
                 .ok_or_else(|| format!("Failed to get folder name from path: {:?}", path))?;
             let path_file = today.join(path_file_name);
 
@@ -61,16 +63,17 @@ impl SnapshotProcess {
         Ok(())
     }
 
-    async fn run_on_existing(&self, source: &Path, yesterday: &Path, today: &Path) -> Result<(), String> {
+    async fn run_on_existing(
+        &self,
+        source: &Path,
+        yesterday: &Path,
+        today: &Path,
+    ) -> Result<(), String> {
         let mut entries = fs::read_dir(source)
             .await
             .map_err(|e| format!("Failed to read source directory: {0}", e))?;
 
-        while let Some(entry) = entries
-            .next_entry()
-            .await
-            .map_err(|e| e.to_string())? {
-
+        while let Some(entry) = entries.next_entry().await.map_err(|e| e.to_string())? {
             let path = entry.path();
             let yesterday_destination = yesterday.join(entry.file_name());
             let today_destination = today.join(entry.file_name());
@@ -81,16 +84,24 @@ impl SnapshotProcess {
                     std::fs::create_dir(&today_destination)
                         .map_err(|e| format!("Failed to create folder: {0}", e))?;
 
-                    Box::pin(self.run_on_existing(&path, &yesterday_destination, &today_destination)).await?;
+                    Box::pin(self.run_on_existing(
+                        &path,
+                        &yesterday_destination,
+                        &today_destination,
+                    ))
+                    .await?;
                 } else if path.is_file() {
-                    let path_file_name = path.file_name()
-                        .ok_or_else(|| format!("Failed to get folder name from path: {:?}", path))?;
+                    let path_file_name = path.file_name().ok_or_else(|| {
+                        format!("Failed to get folder name from path: {:?}", path)
+                    })?;
                     let today_path_file = today.join(path_file_name);
 
                     if self.same_hash(&yesterday_destination, &path).await? {
                         fs::symlink(&yesterday_destination, today_path_file)
                             .await
-                            .map_err(|e| format!("Failed to create symlink in destination: {0}", e))?;
+                            .map_err(|e| {
+                                format!("Failed to create symlink in destination: {0}", e)
+                            })?;
                     } else {
                         fs::copy(&path, &today_destination)
                             .await
@@ -123,14 +134,19 @@ impl SnapshotProcess {
     }
 
     async fn same_hash(&self, source: &Path, destination: &Path) -> Result<bool, String> {
-        let hashes = self.calculate_hashes_in_parallel(vec![source, destination]).await?;
+        let hashes = self
+            .calculate_hashes_in_parallel(vec![source, destination])
+            .await?;
         let first = hashes.get(0).unwrap();
         let second = hashes.get(1).unwrap();
 
         Ok(first == second)
     }
 
-    pub async fn calculate_hashes_in_parallel(&self, paths: Vec<&Path>) -> Result<Vec<String>, String> {
+    pub async fn calculate_hashes_in_parallel(
+        &self,
+        paths: Vec<&Path>,
+    ) -> Result<Vec<String>, String> {
         let mut set = JoinSet::new();
         let self_arc = Arc::new(self.clone());
 
@@ -138,9 +154,7 @@ impl SnapshotProcess {
             let path = path.to_path_buf();
             let self_ref = self_arc.clone();
 
-            set.spawn(async move {
-                self_ref.calculate_hash(&path).await
-            });
+            set.spawn(async move { self_ref.calculate_hash(&path).await });
         }
 
         let mut results = Vec::new();
@@ -164,7 +178,9 @@ impl SnapshotProcess {
         let mut buffer = vec![0u8; 65536];
 
         loop {
-            let n = file.read(&mut buffer).await
+            let n = file
+                .read(&mut buffer)
+                .await
                 .map_err(|e| format!("Failed to read file: {0}", e))?;
             if n == 0 {
                 break;

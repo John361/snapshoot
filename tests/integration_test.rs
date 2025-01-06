@@ -30,7 +30,11 @@ async fn shoot() {
             assert!(result.status.success());
         }
         Err(error) => {
-            assert!(false, "Error during command execution: {}", error.to_string());
+            assert!(
+                false,
+                "Error during command execution: {}",
+                error.to_string()
+            );
         }
     }
 }

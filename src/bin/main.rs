@@ -15,19 +15,28 @@ async fn main() {
             let destination = std::path::Path::new(&args.destination);
 
             let initializer = Initializer::default();
-            initializer.run(source, destination)
+            initializer
+                .run(source, destination)
                 .unwrap_or_else(|e| panic!("Error during initialization: {0}", e));
 
             let snapshot_base_folder = SnapshotBaseFolder::default();
-            let yesterday = snapshot_base_folder.get_yesterday(destination)
-                .unwrap_or_else(|e| panic!("Cannot get yesterday snapshot folder even if does not exist: {0}", e));
-            let today = snapshot_base_folder.create_today(destination)
+            let yesterday = snapshot_base_folder
+                .get_yesterday(destination)
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "Cannot get yesterday snapshot folder even if does not exist: {0}",
+                        e
+                    )
+                });
+            let today = snapshot_base_folder
+                .create_today(destination)
                 .unwrap_or_else(|e| panic!("Cannot create snapshot folder: {0}", e));
             let today = std::path::Path::new(&today);
 
             let snapshot_process = SnapshotProcess::default();
             log::info!("Starting snapshot");
-            snapshot_process.run(source, yesterday, today)
+            snapshot_process
+                .run(source, yesterday, today)
                 .await
                 .unwrap_or_else(|e| panic!("Cannot process to snapshot: {0}", e));
             log::info!("Snapshot finished");
