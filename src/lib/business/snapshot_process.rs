@@ -1,10 +1,12 @@
-use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use sha2::{Digest, Sha256};
 use tokio::fs;
+use tokio::io::AsyncReadExt;
+use tokio::task::JoinSet;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct SnapshotProcess;
 
 impl SnapshotProcess {
@@ -94,21 +96,49 @@ impl SnapshotProcess {
     }
 
     async fn same_hash(&self, source: &Path, destination: &Path) -> Result<bool, String> {
-        let source_hash = self.calculate_hash(source).await?;
-        let destination_hash = self.calculate_hash(destination).await?;
+        let hashes = self.calculate_hashes_in_parallel(vec![source, destination]).await?;
+        let first = hashes.get(0).unwrap();
+        let second = hashes.get(1).unwrap();
 
-        Ok(source_hash == destination_hash)
+        Ok(first == second)
+    }
+
+    pub async fn calculate_hashes_in_parallel(&self, paths: Vec<&Path>) -> Result<Vec<String>, String> {
+        let mut set = JoinSet::new();
+        let self_arc = Arc::new(self.clone());
+
+        for path in paths {
+            let path = path.to_path_buf();
+            let self_ref = self_arc.clone();
+
+            set.spawn(async move {
+                self_ref.calculate_hash(&path).await
+            });
+        }
+
+        let mut results = Vec::new();
+        while let Some(result) = set.join_next().await {
+            match result {
+                Ok(Ok(hash)) => results.push(hash),
+                Ok(Err(e)) => return Err(format!("Task failed: {}", e)),
+                Err(e) => return Err(format!("Task panicked: {}", e)),
+            }
+        }
+
+        Ok(results)
     }
 
     async fn calculate_hash(&self, path: &Path) -> Result<String, String> {
-        let mut file = std::fs::File::open(path)
+        let mut file = fs::File::open(path)
+            .await
             .map_err(|e| format!("Failed to open file for hash calculation: {0}", e))?;
 
         let mut hasher = Sha256::new();
-        let mut buffer = vec![0u8; 4096]; // Buffer de 4 Ko
+        let mut buffer = vec![0u8; 65536];
 
         loop {
-            let n = file.read(&mut buffer).map_err(|e| format!("Failed to read file: {0}", e))?;
+            let n = file.read(&mut buffer).await
+                .map_err(|e| format!("Failed to read file: {0}", e))?;
             if n == 0 {
                 break;
             }
