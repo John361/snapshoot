@@ -692,6 +692,7 @@ dependencies = [
  "clap",
  "log",
  "log4rs",
+ "rand",
  "sha2",
  "tokio",
 ]
